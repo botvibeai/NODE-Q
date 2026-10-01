@@ -1,0 +1,6 @@
+{
+  "name": "Node Q - Corporate Executive Hermes Logistics Platform",
+  "description": "Executive command center and Hermes agent orchestration platform managing global logistics, predictive analytics, automated supply chain optimization, and multi-app branch networks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
