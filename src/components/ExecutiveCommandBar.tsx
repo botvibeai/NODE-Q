@@ -8,16 +8,21 @@ import {
   ArrowRight, 
   ShieldCheck, 
   TrendingUp,
-  RotateCcw
+  RotateCcw,
+  Globe
 } from 'lucide-react';
 import { executeExecutiveDirective, SwarmExecutiveResponse } from '../services/geminiService';
+import { User } from 'firebase/auth';
+import { saveDirectiveToFirestore } from '../services/firebase';
 
 interface ExecutiveCommandBarProps {
   onDirectiveComplete: (res: SwarmExecutiveResponse) => void;
+  currentUser?: User | null;
 }
 
 export const ExecutiveCommandBar: React.FC<ExecutiveCommandBarProps> = ({
-  onDirectiveComplete
+  onDirectiveComplete,
+  currentUser
 }) => {
   const [command, setCommand] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -38,9 +43,35 @@ export const ExecutiveCommandBar: React.FC<ExecutiveCommandBarProps> = ({
     setLastResponse(null);
 
     try {
-      const response = await executeExecutiveDirective(textToRun);
+      let response: SwarmExecutiveResponse;
+      try {
+        const serverRes = await fetch('/api/gemini/directive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: textToRun })
+        });
+        if (serverRes.ok) {
+          response = await serverRes.json();
+        } else {
+          response = await executeExecutiveDirective(textToRun);
+        }
+      } catch {
+        response = await executeExecutiveDirective(textToRun);
+      }
+
       setLastResponse(response);
       onDirectiveComplete(response);
+
+      // Persist to Firestore if user logged in
+      if (currentUser) {
+        saveDirectiveToFirestore(currentUser.uid, {
+          id: `dir-${Date.now()}`,
+          command: textToRun,
+          classification: response.classification,
+          modelSelected: response.modelSelected,
+          outcome: response.operationalOutcome
+        }).catch(err => console.warn('Firestore directive save error:', err));
+      }
     } catch (e) {
       console.error(e);
     } finally {

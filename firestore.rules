@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId == userId &&
+        data.email is string && data.email.size() <= 256 &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1024)) &&
+        (!('role' in data) || (data.role is string && data.role.size() <= 64));
+    }
+
+    function isValidDirective(data, userId) {
+      return data.userId == userId &&
+        data.id is string && data.id.size() <= 128 &&
+        data.command is string && data.command.size() <= 2048 &&
+        data.outcome is string && data.outcome.size() <= 4096;
+    }
+
+    function isValidChatMessage(data, userId) {
+      return data.userId == userId &&
+        data.id is string && data.id.size() <= 128 &&
+        data.role in ['user', 'hermes', 'system'] &&
+        data.content is string && data.content.size() <= 10000;
+    }
+
+    // User documents
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId);
+      allow update: if isOwner(userId) && isValidUserProfile(incoming(), userId) && incoming().userId == existing().userId;
+      allow delete: if isOwner(userId);
+
+      // Historical Executive Directives subcollection
+      match /directives/{directiveId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(directiveId) && isValidDirective(incoming(), userId);
+        allow update: if isOwner(userId) && isValidDirective(incoming(), userId) && incoming().id == existing().id;
+        allow delete: if isOwner(userId);
+      }
+
+      // Floating Hermes Chatbot Messages subcollection
+      match /chatMessages/{messageId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(messageId) && isValidChatMessage(incoming(), userId);
+        allow update: if isOwner(userId) && isValidChatMessage(incoming(), userId) && incoming().id == existing().id;
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

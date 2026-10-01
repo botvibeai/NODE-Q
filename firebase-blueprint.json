@@ -1,0 +1,146 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated executive user profile in Node Q",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique Firebase Authentication UID",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the executive",
+          "maxLength": 128
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar photo URL",
+          "maxLength": 1024
+        },
+        "role": {
+          "type": "string",
+          "description": "Role in the corporate hierarchy",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of account creation"
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "description": "ISO timestamp of latest session"
+        }
+      },
+      "required": ["userId", "email"]
+    },
+    "ExecutiveDirective": {
+      "title": "ExecutiveDirective",
+      "description": "Historical executive commands executed by the Hermes swarm",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique directive identifier",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Issuer user ID",
+          "maxLength": 128
+        },
+        "command": {
+          "type": "string",
+          "description": "Raw executive prompt text",
+          "maxLength": 2048
+        },
+        "classification": {
+          "type": "string",
+          "description": "Classification class (Class 1 or Class 2)",
+          "maxLength": 128
+        },
+        "modelSelected": {
+          "type": "string",
+          "description": "Gemini model allocated",
+          "maxLength": 64
+        },
+        "outcome": {
+          "type": "string",
+          "description": "Operational outcome description",
+          "maxLength": 4096
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO creation timestamp"
+        }
+      },
+      "required": ["id", "userId", "command", "outcome"]
+    },
+    "ChatbotMessage": {
+      "title": "ChatbotMessage",
+      "description": "Continuous training conversation log for the floating Hermes assistant",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique message ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID",
+          "maxLength": 128
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of speaker (user or hermes)",
+          "enum": ["user", "hermes", "system"]
+        },
+        "content": {
+          "type": "string",
+          "description": "Message content",
+          "maxLength": 10000
+        },
+        "isGroundingUsed": {
+          "type": "boolean",
+          "description": "Whether Google Search grounding was used"
+        },
+        "searchSources": {
+          "type": "string",
+          "description": "JSON serialized search source links if grounded",
+          "maxLength": 4096
+        },
+        "hermesKnowledgeLevel": {
+          "type": "number",
+          "description": "Current trained knowledge iteration score"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp"
+        }
+      },
+      "required": ["id", "userId", "role", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents keyed by Firebase auth UID"
+    },
+    "/users/{userId}/directives/{directiveId}": {
+      "schema": "ExecutiveDirective",
+      "description": "Executive directives issued by this user"
+    },
+    "/users/{userId}/chatMessages/{messageId}": {
+      "schema": "ChatbotMessage",
+      "description": "Chatbot memory messages continuously training the Hermes assistant"
+    }
+  }
+}

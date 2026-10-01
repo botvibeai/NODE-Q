@@ -192,3 +192,63 @@ export interface TenantPlanTier {
   };
 }
 
+export type CostImplodeProviderId = 
+  | 'cloudflare_free' 
+  | 'gemini_studio' 
+  | 'cometapi' 
+  | 'aimlapi' 
+  | 'aws_failover';
+
+export interface UpstreamProviderStatus {
+  id: CostImplodeProviderId;
+  name: string;
+  endpoint: string;
+  keyConfigured: boolean;
+  status: 'connected' | 'standby' | 'rate_limited';
+  activeModelsCount: number;
+  featuredModel: string;
+  blendedCostPerMillion: string;
+  isFreeTier: boolean;
+  ttftMs: number;
+  commissionOrRebate: string;
+}
+
+export interface ArbitrageExecutionResult {
+  id: string;
+  timestamp: string;
+  prompt: string;
+  completion: string;
+  providerUsed: string;
+  modelUsed: string;
+  cacheTier: 'Level 1: Exact Hash (<20ms)' | 'Level 2: Regional Shield (<50ms)' | 'Level 3: Semantic Vector (<90ms)' | 'Level 4: Context Prefix' | 'Cache Miss (Live Inference)';
+  latencyMs: number;
+  tokensPrompt: number;
+  tokensCompletion: number;
+  cBaseUsd: number;
+  cRawUsd: number;
+  sRawPct: number;
+  tauDeliveredPct: number;
+  protocolYieldPct: number;
+  protocolYieldUsd: number;
+  userSavingsUsd: number;
+  tokenTaxSavedPct: number;
+  language: string;
+}
+
+export interface CostImplodeGatewayStats {
+  totalRequests: number;
+  totalRawSavingsUsd: number;
+  totalProtocolYieldUsd: number;
+  averageLatencyMs: number;
+  tauGovernanceTarget: number; // 0.633
+  cacheHits: {
+    l1Exact: number;
+    l2Shield: number;
+    l3Semantic: number;
+    l4Prefix: number;
+    liveMisses: number;
+  };
+  providers: UpstreamProviderStatus[];
+}
+
+

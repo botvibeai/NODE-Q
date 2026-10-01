@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { GlobalLogisticsRadar } from './components/GlobalLogisticsRadar';
 import { HermesSwarmMatrix } from './components/HermesSwarmMatrix';
@@ -14,6 +14,16 @@ import { InteractiveHermesTerminal } from './components/InteractiveHermesTermina
 import { DeploySwarmModal } from './components/DeploySwarmModal';
 import { ExecutiveCommandBar } from './components/ExecutiveCommandBar';
 import { MultiTenantRoadmapView } from './components/MultiTenantRoadmapView';
+import { CostImplodeGatewayView } from './components/CostImplodeGatewayView';
+import { FloatingHermesChatbot } from './components/FloatingHermesChatbot';
+import { CloudflareWorkersMonitor } from './components/CloudflareWorkersMonitor';
+import { 
+  auth, 
+  googleProvider, 
+  testFirestoreConnection, 
+  syncUserProfileToFirestore 
+} from './services/firebase';
+import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { 
   INITIAL_HERMES_AGENTS, 
   INITIAL_CHILD_NODES, 
@@ -47,9 +57,49 @@ export default function App() {
   const [protocolYield, setProtocolYield] = useState<string>('$258,000 / mo');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Firebase auth & Firestore states
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isFirestoreConnected, setIsFirestoreConnected] = useState<boolean>(false);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  useEffect(() => {
+    testFirestoreConnection().then(ok => setIsFirestoreConnected(ok));
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      if (user) {
+        syncUserProfileToFirestore(user).catch(err => console.warn('User profile sync:', err));
+        showToast(`Welcome, ${user.displayName || user.email}! Connected to Firestore.`);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleSignIn = async () => {
+    try {
+      const res = await signInWithPopup(auth, googleProvider);
+      if (res.user) {
+        await syncUserProfileToFirestore(res.user);
+        showToast(`Signed in successfully as ${res.user.displayName || res.user.email}`);
+      }
+    } catch (error: any) {
+      console.error('Sign-in error:', error);
+      showToast(`Google Sign-In: ${error.message || 'Cancelled'}`);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      showToast('Signed out of Node Q.');
+    } catch (error: any) {
+      console.error('Sign-out error:', error);
+    }
   };
 
   // Handler for rerouting an order
@@ -230,6 +280,10 @@ monthly_protocol_yield_usd: $86,100.00
         setIsAutopilot={setIsAutopilot}
         activeAgentsCount={agents.length}
         protocolYield={protocolYield}
+        currentUser={currentUser}
+        onSignIn={handleSignIn}
+        onSignOut={handleSignOut}
+        isFirestoreConnected={isFirestoreConnected}
       />
 
       {/* Content Container */}
@@ -237,17 +291,25 @@ monthly_protocol_yield_usd: $86,100.00
         {/* Executive Directive Command Bar */}
         <ExecutiveCommandBar
           onDirectiveComplete={handleDirectiveComplete}
+          currentUser={currentUser}
         />
 
         {/* Tab Views */}
         {activeTab === 'dashboard' && (
-          <GlobalLogisticsRadar
-            nodes={logisticsNodes}
-            consignments={consignments}
-            onRerouteOrder={handleRerouteOrder}
-            onOptimizeAllRoutes={handleOptimizeAllRoutes}
-            isAutopilot={isAutopilot}
-          />
+          <div className="space-y-6">
+            <CloudflareWorkersMonitor />
+            <GlobalLogisticsRadar
+              nodes={logisticsNodes}
+              consignments={consignments}
+              onRerouteOrder={handleRerouteOrder}
+              onOptimizeAllRoutes={handleOptimizeAllRoutes}
+              isAutopilot={isAutopilot}
+            />
+          </div>
+        )}
+
+        {activeTab === 'costimplode' && (
+          <CostImplodeGatewayView />
         )}
 
         {activeTab === 'swarm' && (
@@ -297,6 +359,9 @@ monthly_protocol_yield_usd: $86,100.00
         onClose={() => setIsDeployModalOpen(false)}
         onDeploymentSuccess={handleDeploymentSuccess}
       />
+
+      {/* Floating Hermes Self-Training Chatbot (On Every Page) */}
+      <FloatingHermesChatbot currentUser={currentUser} />
 
       {/* Footer */}
       <footer className="border-t border-slate-800/60 bg-slate-950/80 px-4 py-4 text-center text-xs font-mono text-slate-500">

@@ -10,8 +10,13 @@ import {
   TrendingUp,
   Layers,
   Sparkles,
-  Server
+  Server,
+  LogIn,
+  LogOut,
+  Database,
+  User as UserIcon
 } from 'lucide-react';
+import { User } from 'firebase/auth';
 
 interface HeaderProps {
   activeTab: string;
@@ -21,6 +26,10 @@ interface HeaderProps {
   setIsAutopilot: (val: boolean) => void;
   activeAgentsCount: number;
   protocolYield: string;
+  currentUser: User | null;
+  onSignIn: () => void;
+  onSignOut: () => void;
+  isFirestoreConnected: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,7 +39,11 @@ export const Header: React.FC<HeaderProps> = ({
   isAutopilot,
   setIsAutopilot,
   activeAgentsCount,
-  protocolYield
+  protocolYield,
+  currentUser,
+  onSignIn,
+  onSignOut,
+  isFirestoreConnected
 }) => {
   return (
     <header className="border-b border-slate-800/80 bg-[#090d16]/95 backdrop-blur-md sticky top-0 z-40">
@@ -99,6 +112,12 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {/* Firestore Connection Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300">
+            <Database className={`w-3 h-3 ${isFirestoreConnected ? 'text-emerald-400' : 'text-amber-400'}`} />
+            <span>Firestore: <strong className={isFirestoreConnected ? 'text-emerald-400 font-semibold' : 'text-amber-400'}>{isFirestoreConnected ? 'Online' : 'Initializing'}</strong></span>
+          </div>
+
           {/* Autopilot toggle */}
           <button
             onClick={() => setIsAutopilot(!isAutopilot)}
@@ -112,6 +131,33 @@ export const Header: React.FC<HeaderProps> = ({
             <Zap className={`w-3.5 h-3.5 ${isAutopilot ? 'text-emerald-400 animate-pulse' : 'text-slate-400'}`} />
             <span>Autopilot: <strong className="uppercase">{isAutopilot ? 'Autonomous' : 'Semi-Auto'}</strong></span>
           </button>
+
+          {/* Firebase Authentication Button */}
+          {currentUser ? (
+            <div className="flex items-center gap-2 bg-slate-900 border border-cyan-800/60 rounded-lg px-2.5 py-1 text-xs font-mono">
+              {currentUser.photoURL ? (
+                <img src={currentUser.photoURL} alt="Avatar" className="w-5 h-5 rounded-full" />
+              ) : (
+                <UserIcon className="w-4 h-4 text-cyan-400" />
+              )}
+              <span className="text-slate-200 truncate max-w-[120px]">{currentUser.displayName || currentUser.email}</span>
+              <button
+                onClick={onSignOut}
+                className="text-slate-400 hover:text-red-400 ml-1 p-0.5 transition-colors"
+                title="Sign out of Firebase"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onSignIn}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-mono font-medium transition-all shadow"
+            >
+              <LogIn className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Google Sign-In</span>
+            </button>
+          )}
 
           {/* 1-Click Deploy Hermes Swarm Button */}
           <button
@@ -128,6 +174,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto no-scrollbar gap-1 border-t border-slate-800/50">
         {[
           { id: 'dashboard', label: 'Global Logistics Radar', icon: Globe, badge: 'Live' },
+          { id: 'costimplode', label: 'CostImplodeAI Gateway', icon: Zap, badge: 'tau=0.633' },
           { id: 'swarm', label: 'Hermes Swarm Matrix', icon: Cpu, badge: '8 Units' },
           { id: 'mesh', label: 'Branch App Mesh (Empire)', icon: Layers, badge: '4 Nodes' },
           { id: 'roadmap', label: 'Multi-Tenant Architecture', icon: Server, badge: 'Enterprise' },
